@@ -33,7 +33,8 @@ public class ${tableName}Controller {
 
     public static final Logger logger = LoggerFactory.getLogger(${tableName}Controller.class);
     <#if isHaveExport??&&isHaveExport=='Y'>
-    private static final String[] EXPORT_TITLES = { <#list exportColumnInfos as columnInfo>"${columnInfo.columnComment}"<#if columnInfo_has_next>,</#if></#list>};
+    private static final String[] EXPORT_TITLES = { <#list exportColumnInfos as columnInfo>"${columnInfo.columnComment}"<#if columnInfo_has_next || joinExportColumnInfos??>,</#if></#list>
+<#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)><#list joinExportColumnInfos as joinExportColumnInfo>"${joinExportColumnInfo.columnComment}"<#if joinExportColumnInfo_has_next>,</#if></#list></#if>};
     private static final String EXPORT_EXC_NAME = "${tableCnName}列表";
     </#if>
     @Autowired
@@ -44,8 +45,12 @@ public class ${tableName}Controller {
 
     @RequestMapping(value = {"fetchList"}, method = RequestMethod.POST)
     @ApiOperation(value = "查询${tableCnName}列表", notes = "查询${tableCnName}列表")
-    @ApiImplicitParams({<#list tableInfos as tableInfo>@ApiImplicitParam(name = "${tableInfo.columnName}", value = "${tableInfo.columnComment}")<#if tableInfo_has_next>,</#if>
-                        </#list>})
+    @ApiImplicitParams({<#list tableInfos as tableInfo>@ApiImplicitParam(name = "${tableInfo.columnName}", value = "${tableInfo.columnComment}")<#if tableInfo_has_next || joinSelectColumnInfos??>,</#if>
+                        </#list>
+                        <#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>
+                        <#list joinSelectColumnInfos as joinSelectColumnInfo>
+                                                       @ApiImplicitParam(name = "${joinSelectColumnInfo.columnName}", value = "${joinSelectColumnInfo.columnComment}")<#if joinSelectColumnInfo_has_next>,</#if>
+                        </#list>}</#if>)
     public ApiResponse<PageResponse> fetchList(PageRequest pageRequest) {
         try {
             PageResponse pageInfo = service.fetchList(pageRequest);
@@ -81,7 +86,7 @@ public class ${tableName}Controller {
     @ApiOperation(value = "导出excel文件", notes = "导出excel文件")
     @ApiImplicitParams({<#list tableInfos as tableInfo>@ApiImplicitParam(name = "${tableInfo.columnName}", value = "${tableInfo.columnComment}")<#if tableInfo_has_next>,</#if>
     </#list>})
-    public ApiResponse<?> exportRptFile(@RequestParam Map<String, String> paramMap, HttpServletResponse response) {
+    public ApiResponse<?> export${tableName}List(@RequestParam Map<String, String> paramMap, HttpServletResponse response) {
          try{
              PageRequest pageReq = new PageRequest();
              pageReq.setCriteriaMap(paramMap);
@@ -95,9 +100,16 @@ public class ${tableName}Controller {
                //每一行数据(对象)
                  Map<String, Object> map = rowList.get(i);
                  List<Object> list = new ArrayList<Object>();
+                 <#if exportColumnInfos??&&(exportColumnInfos?size>0)>
                  <#list exportColumnInfos as columnInfo>
                  list.add(map.get("${columnInfo.columnName}"));
                  </#list>
+                 </#if>
+                 <#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>
+                 <#list joinExportColumnInfos as joinExportColumnInfo>
+                 list.add(map.get("${joinExportColumnInfo.columnName}"));
+                 </#list>
+                 </#if>
                  dataList.add(list);
                }
              }

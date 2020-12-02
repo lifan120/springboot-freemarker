@@ -8,6 +8,13 @@ import com.xrfintech.common.exception.ProcessException;
 import com.xrfintech.${module}.repository.model.${tableName};
 import com.xrfintech.${module}.repository.model.Q${tableName};
 import com.xrfintech.${module}.repository.repos.R${tableName};
+
+<#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>
+import com.xrfintech.${module}.repository.model.${joinTableName};
+import com.xrfintech.${module}.repository.model.Q${joinTableName};
+import com.xrfintech.${module}.repository.repos.R${joinTableName};
+</#if>
+
 import com.xrfintech.common.serializable.JsonSerializeUtil;
 import com.xrfintech.common.utils.DateUtil;
 import com.xrfintech.fims.ui.entity.SubEnterpriseInfo;
@@ -45,24 +52,29 @@ public class ${tableName}Service {
     @Autowired
     private R${tableName} r${tableName};
 
+    <#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>
+    @Autowired
+    private R${joinTableName} r${joinTableName};
+    </#if>
+
         /**
-        * 保存${tableCnName}
+        * 查询${tableCnName}
         *
         */
         public PageResponse<?> fetchList(PageRequest request) {
         try {
             Q${tableName} q${tableName} = Q${tableName}.${lcTableName};
+            <#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>
+            Q${joinTableName} q${joinTableName} = Q${joinTableName}.${lcJoinTableName};
+            </#if>
+
             BooleanExpression exp = q${tableName}.${primaryKey}.isNotNull();
+            <#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>
+            exp = exp.and(q${tableName}.${primaryKey}.eq(q${joinTableName}.${joinColumnName}));s
+            </#if>
             if (request.getCriteriaMap() != null) {
                 Map<String, String> criteriaMap = request.getCriteriaMap();
                 <#list tableInfos as tableInfo>
-                <#if tableInfo.dataType =="varchar">
-                String ${tableInfo.columnName} = criteriaMap.get("${tableInfo.columnName}");
-                if (StringUtils.isNotBlank(${tableInfo.columnName})) {
-                    exp = exp.and(q${tableName}.${tableInfo.columnName}.eq(${tableInfo.columnName}));
-                }
-
-                </#if>
                 <#if tableInfo.dataType == 'date'>
                 String ${tableInfo.columnName}StartTime = criteriaMap.get("${tableInfo.columnName}StartTime");
                 String ${tableInfo.columnName}EndTime = criteriaMap.get("${tableInfo.columnName}EndTime");
@@ -74,14 +86,41 @@ public class ${tableName}Service {
                 exp = exp.and(q${tableName}.${tableInfo.columnName}.lt(DateUtil.addDays(
                 (DateUtil.parseDate(${tableInfo.columnName}EndTime, DateTimePatternConstants.DATE_LINE)), 1)));
                 }
-
+                <#else >
+                 String ${tableInfo.columnName} = criteriaMap.get("${tableInfo.columnName}");
+                 if (StringUtils.isNotBlank(${tableInfo.columnName})) {
+                 exp = exp.and(q${tableName}.${tableInfo.columnName}.eq(${tableInfo.columnName}));
+                 }
                 </#if>
                 </#list>
+
+                <#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>
+                    <#list joinSelectColumnInfos as joinSelectColumnInfo>
+                        <#if joinSelectColumnInfo.dataType == 'date'>
+                            String ${joinSelectColumnInfo.columnName}StartTime = criteriaMap.get("${joinSelectColumnInfo.columnName}StartTime");
+                            String ${joinSelectColumnInfo.columnName}EndTime = criteriaMap.get("${joinSelectColumnInfo.columnName}EndTime");
+                            if (StringUtils.isNotBlank(${joinSelectColumnInfo.columnName}StartTime)) {
+                            exp = exp.and(q${joinTableName}.${joinSelectColumnInfo.columnName}.goe(DateUtil.parseDate(${joinSelectColumnInfo.columnName}StartTime,
+                            DateTimePatternConstants.DATE_LINE)));
+                            }
+                            if (StringUtils.isNotBlank(${joinSelectColumnInfo.columnName}EndTime)) {
+                            exp = exp.and(q${joinTableName}.${joinSelectColumnInfo.columnName}.lt(DateUtil.addDays(
+                            (DateUtil.parseDate(${joinSelectColumnInfo.columnName}EndTime, DateTimePatternConstants.DATE_LINE)), 1)));
+                            }
+                        <#else >
+                            String ${joinSelectColumnInfo.columnName} = criteriaMap.get("${joinSelectColumnInfo.columnName}");
+                            if (StringUtils.isNotBlank(${joinSelectColumnInfo.columnName})) {
+                            exp = exp.and(q${joinTableName}.${joinSelectColumnInfo.columnName}.eq(${joinSelectColumnInfo.columnName}));
+                            }
+
+                        </#if>
+                    </#list>
+                </#if>
             }
 
             JPAQuery<Q${tableName}> query = new JPAQuery<>(em);
-            query.select(q${tableName})
-                    .from(q${tableName})
+            query.select(q${tableName}<#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>,q${joinTableName}</#if>)
+                    .from(q${tableName}<#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>,q${joinTableName}</#if>)
                     .where(exp);
 
             if (StringUtils.isBlank(request.getSortName())) {
@@ -90,6 +129,11 @@ public class ${tableName}Service {
 
             PageResponse<?> pageResponse = (new JPAPaginationQueryBuilder(request, query))
                     .addFieldMapping(q${tableName})
+                    <#if joinViewColumnInfos??&&(joinViewColumnInfos?size>0)>
+                    <#list joinViewColumnInfos as joinViewColumnInfo>
+                    .addFieldMapping(${joinTableName}.P_${joinViewColumnInfo.ucColumnName},q${joinTableName}.${joinViewColumnInfo.columnName})
+                    </#list>
+                    </#if>
                     .build();
             return pageResponse;
         } catch (Exception e) {

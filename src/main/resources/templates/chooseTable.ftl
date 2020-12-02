@@ -14,13 +14,11 @@
         </#list>
     </select>
     <br/>
-    是否需要连表查询
-    是<input type="radio" name="isJoinTable" value="Y"/>
-    否<input type="radio" name="isJoinTable" value="N"/>
     <br/>
     请选择要连接的表
     <!-- 下拉框 -->
     <select name="joinTableName" size="1" >
+        <option value="">请选择</option>
         <#list tableNameList as tableName>
             <option value="${tableName}">${tableName}</option>
         </#list>

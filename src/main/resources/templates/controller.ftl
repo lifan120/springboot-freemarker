@@ -82,7 +82,7 @@ public class ${tableName}Controller {
         return ApiResponseUtil.ok(null);
     }
 
-    @RequestMapping(value = "exportRpt", method = RequestMethod.GET)
+    @RequestMapping(value = "export${tableName}List", method = RequestMethod.GET)
     @ApiOperation(value = "导出excel文件", notes = "导出excel文件")
     @ApiImplicitParams({<#list tableInfos as tableInfo>@ApiImplicitParam(name = "${tableInfo.columnName}", value = "${tableInfo.columnComment}")<#if tableInfo_has_next>,</#if>
     </#list>})

@@ -70,7 +70,7 @@ public class ${tableName}Service {
 
             BooleanExpression exp = q${tableName}.${primaryKey}.isNotNull();
             <#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>
-            exp = exp.and(q${tableName}.${primaryKey}.eq(q${joinTableName}.${joinColumnName}));s
+            exp = exp.and(q${tableName}.${primaryKey}.eq(q${joinTableName}.${joinColumnName}));
             </#if>
             if (request.getCriteriaMap() != null) {
                 Map<String, String> criteriaMap = request.getCriteriaMap();

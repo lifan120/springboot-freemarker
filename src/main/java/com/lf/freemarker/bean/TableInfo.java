@@ -2,6 +2,8 @@ package com.lf.freemarker.bean;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * TableInfo
  *
@@ -10,11 +12,16 @@ import lombok.Data;
  * @Description:
  */
 @Data
-public class TableInfo {
+public class TableInfo implements Serializable {
     /**
      *列名
      */
     private String columnName;
+
+    /**
+     * 大写列名
+     */
+    private String ucColumnName;
     /**
      *数据类型
      */

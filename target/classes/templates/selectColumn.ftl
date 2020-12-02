@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html xmlns="http://www.w3.org/1999/html">
 <head>
-    <title>FreeMarker Spring MVC 之 表单提交</title>
+    <title>代码生成选择列</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 </head>
 <body>
@@ -13,6 +13,20 @@
     中文名:<input  name="tableCnName"/>
     英文名:<input readonly="readonly" name="tableName" value="${tableName}"/>
     <br/>
+    关联的表
+    <br/>
+    英文名:<input readonly="readonly" name="joinTableName" value="${joinTableName}"/>
+    <br/>
+    请选择关联的条件字段
+    <#list joinTableInfos as joinTableInfo>
+        <#if joinTableInfo_index%5==0>
+            <br>
+        </#if>
+        <input type="radio" name="joinColumnName" value="${joinTableInfo.columnName}"  >
+            ${joinTableInfo.columnComment}
+        </input>
+    </#list>
+    <br/>
     请选择需要查询的字段：
     <#list tableInfos as tableInfo>
         <#if tableInfo_index%5==0>
@@ -23,6 +37,17 @@
         </input>
     </#list>
     <br/>
+    关联表需要查询的字段：
+    <br/>
+    <#list joinTableInfos as joinTableInfo>
+        <#if joinTableInfo_index%5==0>
+            <br>
+        </#if>
+        <input type="checkbox" name="joinSelectColumn" value="${joinTableInfo.columnName}"  >
+            ${joinTableInfo.columnComment}
+        </input>
+    </#list>
+    <br/>
     请选择需要展示的字段：
     <#list tableInfos as tableInfo>
         <#if tableInfo_index%5==0>
@@ -30,6 +55,16 @@
         </#if>
         <input type="checkbox" name="viewColumn" value="${tableInfo.columnName}"  >
             ${tableInfo.columnComment}
+        </input>
+    </#list>
+    <br/>
+    关联表需要展示的字段
+    <#list joinTableInfos as joinTableInfo>
+        <#if joinTableInfo_index%5==0>
+            <br>
+        </#if>
+        <input type="checkbox" name="joinViewColumn" value="${joinTableInfo.columnName}"  >
+            ${joinTableInfo.columnComment}
         </input>
     </#list>
     <br/>
@@ -45,6 +80,17 @@
         </#if>
         <input type="checkbox" name="exportColumn" value="${tableInfo.columnName}"  >
             ${tableInfo.columnComment}
+        </input>
+    </#list>
+    <br/>
+    关联表需要导出的字段：
+    <br/>
+    <#list joinTableInfos as joinTableInfo>
+        <#if joinTableInfo_index%5==0>
+            <br>
+        </#if>
+        <input type="checkbox" name="joinExportColumn" value="${joinTableInfo.columnName}"  >
+            ${joinTableInfo.columnComment}
         </input>
     </#list>
 

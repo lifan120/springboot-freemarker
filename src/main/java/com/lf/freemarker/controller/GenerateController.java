@@ -58,12 +58,17 @@ public class GenerateController {
                                                @RequestParam("tableCnName") String tableCnName,
                                                @RequestParam("selectColumn") List<String> selectColumns,
                                                @RequestParam("viewColumn") List<String> viewColumns,
+                                               @RequestParam(value = "joinTableName",required = false) String joinTableName,
+                                               @RequestParam(value = "joinColumnName",required = false) String joinColumnName,
+                                               @RequestParam(value = "joinSelectColumn",required = false) List<String> joinSelectColumn,
+                                               @RequestParam(value = "joinViewColumn",required = false) List<String> joinViewColumn,
                                                @RequestParam("isHaveExport") String isHaveExport,
+                                               @RequestParam(value = "joinExportColumn",required = false) List<String> joinExportColumn,
                                                @RequestParam(value = "exportColumn",required = false) List<String> exportColumns,
                                                @RequestParam("isNeedDelete") String isNeedDelete){
-        service.generateController(tableName, tableCnName, selectColumns,isHaveExport,exportColumns);
-        service.generateService(tableName,selectColumns,tableCnName);
-        service.generateVue(tableName,tableCnName,selectColumns,viewColumns,isHaveExport,isNeedDelete);
+        service.generateController(tableName, tableCnName, selectColumns,isHaveExport,exportColumns,joinTableName,joinSelectColumn,joinExportColumn);
+        service.generateService(tableName,selectColumns,tableCnName,joinTableName,joinColumnName,joinSelectColumn,joinViewColumn);
+        service.generateVue(tableName,tableCnName,selectColumns,viewColumns,isHaveExport,isNeedDelete,joinTableName,joinSelectColumn,joinViewColumn);
 
         //压缩生成后文件所在的文件夹
         File zip = ZipUtil.zip(classPath);

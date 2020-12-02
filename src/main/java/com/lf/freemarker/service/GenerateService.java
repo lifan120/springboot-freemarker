@@ -7,6 +7,7 @@ import freemarker.template.Template;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.BufferedWriter;
@@ -43,7 +44,14 @@ public class GenerateService {
     @Autowired
     private TableDao dao;
 
-    public String generateController(String tableName, String tableCnName, List<String> selectColumns,String isHaveExport,List<String> exportColumns) {
+    public String generateController(String tableName,
+                                     String tableCnName,
+                                     List<String> selectColumns,
+                                     String isHaveExport,
+                                     List<String> exportColumns,
+                                     String joinTableName,
+                                     List<String> joinSelectColumn,
+                                     List<String> joinExportColumn) {
         //开始生成代码逻辑
         //根据表名生成controller,随后生成service
         Configuration configuration = new Configuration(Configuration.VERSION_2_3_0);
@@ -52,7 +60,7 @@ public class GenerateService {
             // step2 获取模版路径
             configuration.setDirectoryForTemplateLoading(new File(TEMPLATE_PATH));
             // step3 创建数据模型
-            Map<String, Object> dataMap = generateControllerDataMap(tableName, selectColumns,exportColumns);
+            Map<String, Object> dataMap = generateControllerDataMap(tableName, selectColumns,exportColumns,joinTableName,joinSelectColumn,joinExportColumn);
             dataMap.put("tableCnName", tableCnName);
             dataMap.put("isHaveExport", isHaveExport);
             // step4 加载模版文件
@@ -80,11 +88,14 @@ public class GenerateService {
         return null;
     }
 
-    private Map<String, Object> generateControllerDataMap(String tableName, List<String> selectColumns,List<String> exportColumns) {
+    private Map<String, Object> generateControllerDataMap(String tableName,
+                                                          List<String> selectColumns,
+                                                          List<String> exportColumns,
+                                                          String joinTableName,
+                                                          List<String> joinSelectColumns,
+                                                          List<String> joinExportColumns) {
         Map<String, Object> dataMap = new HashMap<String, Object>();
         List<TableInfo> tableInfos = dao.selectAllTableInfo(DATA_BASE_NAME, tableName);
-
-        List<TableInfo> exportTableInfos = dao.selectAllTableInfo(DATA_BASE_NAME, tableName);
         //查询表的主键
         tableInfos.stream().forEach(item -> {
             if (PRIMARY.equals(item.getColumnKey())) {
@@ -93,25 +104,40 @@ public class GenerateService {
         });
         //先将module分解出来
         String module = tableName.substring(0, tableName.indexOf("_"));
+
+        //利用selectColumns将tableInfo筛选出来
+        List<TableInfo> returnTableInfos = filterTableInfos(tableName, selectColumns);
+        dataMap.put("tableInfos",returnTableInfos);
+        if(!CollectionUtils.isEmpty(exportColumns)) {
+            List<TableInfo> exportColumnInfos = filterTableInfos(tableName, exportColumns);
+            dataMap.put("exportColumnInfos", exportColumnInfos);
+        }
+        if(!CollectionUtils.isEmpty(joinSelectColumns)) {
+            List<TableInfo> joinSelectColumnInfos = filterTableInfos(joinTableName, joinSelectColumns);
+            dataMap.put("joinSelectColumnInfos", joinSelectColumnInfos);
+        }
+        if(!CollectionUtils.isEmpty(joinExportColumns)) {
+            List<TableInfo> joinExportColumnInfos = filterTableInfos(joinTableName, joinExportColumns);
+            dataMap.put("joinExportColumnInfos", joinExportColumnInfos);
+        }
         tableName = underline2Camel(tableName, true);
         dataMap.put("module", module);
         dataMap.put("tableName", tableName);
-        //利用selectColumns将tableInfo筛选出来
-        List<TableInfo> returnTableInfos = filterTableInfos(tableInfos, selectColumns);
-        dataMap.put("tableInfos",returnTableInfos);
 
-        List<TableInfo> exportColumnInfos = filterTableInfos(exportTableInfos, exportColumns);
-        dataMap.put("exportColumnInfos", exportColumnInfos);
         return dataMap;
     }
 
-    public void generateService(String tableName, List<String> selectColumns, String tableCnName) {
+    public void generateService(String tableName, List<String> selectColumns, String tableCnName,String joinTableName,
+                                String joinColumnName, List<String> joinSelectColumn,List<String> joinViewColumn) {
         Configuration configuration = new Configuration(Configuration.VERSION_2_3_0);
         Writer out = null;
         try {
             configuration.setDirectoryForTemplateLoading(new File(TEMPLATE_PATH));
             //渲染service模板
-            Map<String, Object> dataMapToService = generateServiceDataMap(tableName, selectColumns, tableCnName);
+            Map<String, Object> dataMapToService = generateServiceDataMap(tableName, selectColumns, tableCnName,joinTableName,joinSelectColumn,joinViewColumn);
+            dataMapToService.put("joinTableName",underline2Camel(joinTableName,true));
+            dataMapToService.put("joinColumnName",underline2Camel(joinColumnName));
+            dataMapToService.put("lcJoinTableName",underline2Camel(joinTableName));
             // step4 加载模版文件
             Template serviceTemplate = configuration.getTemplate("service.ftl");
             // step5输出文件
@@ -134,7 +160,9 @@ public class GenerateService {
         }
     }
 
-    private Map<String, Object> generateServiceDataMap(String tableName, List<String> selectColumns, String tableCnName) {
+    private Map<String, Object> generateServiceDataMap(String tableName, List<String> selectColumns, String tableCnName,
+                                                       String joinTableName,
+                                                       List<String> joinSelectColumn, List<String> joinViewColumn) {
         Map<String, Object> mapDataToService = new HashMap<>();
         String module = tableName.substring(0, tableName.indexOf("_"));
         mapDataToService.put("module", module);
@@ -149,8 +177,16 @@ public class GenerateService {
                 mapDataToService.put("primaryKey", underline2Camel(item.getColumnName()));
             }
         });
-        List<TableInfo> returnTableInfos = filterTableInfos(tableInfos, selectColumns);
+        List<TableInfo> returnTableInfos = filterTableInfos(tableName, selectColumns);
         mapDataToService.put("tableInfos", returnTableInfos);
+        if(!CollectionUtils.isEmpty(joinSelectColumn)) {
+            List<TableInfo> joinSelectColumnInfos = filterTableInfos(joinTableName, joinSelectColumn);
+            mapDataToService.put("joinSelectColumnInfos", joinSelectColumnInfos);
+        }
+        if(!CollectionUtils.isEmpty(joinViewColumn)) {
+            List<TableInfo> joinViewColumnInfos = filterTableInfos(joinTableName, joinViewColumn);
+            mapDataToService.put("joinViewColumnInfos", joinViewColumnInfos);
+        }
         return mapDataToService;
     }
 
@@ -160,13 +196,16 @@ public class GenerateService {
                             List<String> selectColumns,
                             List<String> viewColumns,
                             String isHaveExport,
-                            String isNeedDelete) {
+                            String isNeedDelete,
+                            String joinTableName,
+                            List<String> joinSelectColumn,
+                            List<String> joinViewColumn) {
         Configuration configuration = new Configuration(Configuration.VERSION_2_3_0);
         Writer out = null;
         try {
             configuration.setDirectoryForTemplateLoading(new File(TEMPLATE_PATH));
             //渲染service模板
-            Map<String, Object> vueDataMap = generateVueDataMap(tableName, tableCnName, selectColumns, viewColumns);
+            Map<String, Object> vueDataMap = generateVueDataMap(tableName, tableCnName, selectColumns, viewColumns,joinTableName,joinSelectColumn,joinViewColumn);
             vueDataMap.put("isHaveExport",isHaveExport);
             vueDataMap.put("isNeedDelete",isNeedDelete);
             // step4 加载模版文件
@@ -202,7 +241,7 @@ public class GenerateService {
             //  加载模版文件
             Template vueTemplate = configuration.getTemplate("api.ftl");
             // 输出文件
-            String vuePath = classPath + "\\" + vueDataMap.get("module")+".js";
+            String vuePath = classPath + "\\" + vueDataMap.get("tableName")+".js";
             File serviceDocFile = new File(vuePath);
             out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(serviceDocFile)));
             vueTemplate.process(vueDataMap, out);
@@ -222,40 +261,60 @@ public class GenerateService {
 
     }
 
-    private Map<String, Object> generateVueDataMap(String tableName, String tableCnName, List<String> selectColumns, List<String> viewColumns) {
+    private Map<String, Object> generateVueDataMap(String tableName,
+                                                   String tableCnName,
+                                                   List<String> selectColumns,
+                                                   List<String> viewColumns,
+                                                   String joinTableName,
+                                                   List<String> joinSelectColumn,
+                                                   List<String> joinViewColumn) {
         Map<String, Object> vueDataMap = new HashMap<>();
         vueDataMap.put("tableName", underline2Camel(tableName,true));
         vueDataMap.put("tableCnName", tableCnName);
         String module = tableName.substring(0, tableName.indexOf("_"));
         vueDataMap.put("module", module);
         List<TableInfo> tableInfos = dao.selectAllTableInfo(DATA_BASE_NAME, tableName);
-        List<TableInfo> selectColumnInfos = filterTableInfos(tableInfos, selectColumns);
+        List<TableInfo> selectColumnInfos = filterTableInfos(tableName, selectColumns);
         vueDataMap.put("selectColumnInfos",selectColumnInfos);
-        List<TableInfo> tableInfos2 = dao.selectAllTableInfo(DATA_BASE_NAME, tableName);
-        List<TableInfo> viewColumnInfos = filterTableInfos(tableInfos2, viewColumns);
+
+        List<TableInfo> viewColumnInfos = filterTableInfos(tableName, viewColumns);
         vueDataMap.put("viewColumnInfos",viewColumnInfos);
         tableInfos.stream().forEach(item -> {
             if (PRIMARY.equals(item.getColumnKey())) {
                 vueDataMap.put("primaryKey", underline2Camel(item.getColumnName()));
             }
         });
+
+        if(!CollectionUtils.isEmpty(joinSelectColumn)) {
+            List<TableInfo> joinSelectColumnInfos = filterTableInfos(joinTableName, joinSelectColumn);
+            vueDataMap.put("joinSelectColumnInfos", joinSelectColumnInfos);
+        }
+        if(!CollectionUtils.isEmpty(joinViewColumn)) {
+            List<TableInfo> joinViewColumnInfos = filterTableInfos(joinTableName, joinViewColumn);
+            vueDataMap.put("joinViewColumnInfos", joinViewColumnInfos);
+        }
+
+
         return vueDataMap;
     }
 
     /**
      * 将字段信息过滤出来
-     * @param tableInfos
+     * @param tableName
      * @param columns
      * @return
      */
-    private List<TableInfo> filterTableInfos(List<TableInfo> tableInfos, List<String> columns) {
+    private List<TableInfo> filterTableInfos(String tableName, List<String> columns) {
+        List<TableInfo> tableInfos = dao.selectAllTableInfo(DATA_BASE_NAME, tableName);
         Set set = new HashSet(columns);
         List<TableInfo> returnTableInfos = new ArrayList<>();
         Iterator<TableInfo> iterator = tableInfos.iterator();
         while (iterator.hasNext()) {
             TableInfo next = iterator.next();
             if (set.contains(next.getColumnName())) {
-                next.setColumnName(underline2Camel(next.getColumnName()));
+                String columnName = next.getColumnName();
+                next.setColumnName(underline2Camel(columnName));
+                next.setUcColumnName(underline2Camel(columnName,true));
                 returnTableInfos.add(next);
             }
         }

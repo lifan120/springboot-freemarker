@@ -56,18 +56,7 @@
                     },
                     searchAttributes: [
                         <#list selectColumnInfos as selectColumn>
-                        <#if selectColumn.dataType == "varchar">
-                        {
-                            code: '${selectColumn.columnName}',
-                            label: '${selectColumn.columnComment}',
-                            type: 'text',
-                            minLength: 0,
-                            MaxLength: 80,
-                            required: true,
-                            labelWidth: '80px'
-                        },
-                        </#if>
-                        <#if selectColumn.dataType == "date">
+                        <#if  selectColumn.dataType == "date">
                         {
                             code: '${selectColumn.columnName}Range',
                             label: '${selectColumn.columnComment}',
@@ -76,7 +65,7 @@
                             valFormat: 'yyyy-MM-dd',
                             required: true,
                             fieldWidth: "250px",
-                            labelWidth: '160px',
+                            labelWidth: '110px',
                             changed: (_v) => {
                                 if (_v) {
                                     this.table.searchObj.${selectColumn.columnName}StartTime = _v[0];
@@ -87,16 +76,58 @@
                                 }
                             }
                         },
+                        <#else>
+                        {
+                            code: '${selectColumn.columnName}',
+                            label: '${selectColumn.columnComment}',
+                            type: 'text',
+                            minLength: 0,
+                            MaxLength: 80,
+                            required: true,
+                            labelWidth: '80px'
+                        },
                         </#if>
                         </#list>
+
+                        <#if joinSelectColumnInfos??&&(joinSelectColumnInfos?size>0)>
+                        <#list joinSelectColumnInfos as joinSelectColumnInfo>
+
+                        <#if joinSelectColumnInfo.dataType == "date">
+                        {
+                            code: '${joinSelectColumnInfo.columnName}Range',
+                            label: '${joinSelectColumnInfo.columnComment}',
+                            placeholder: '请选择',
+                            type: 'daterange',
+                            valFormat: 'yyyy-MM-dd',
+                            required: true,
+                            fieldWidth: "250px",
+                            labelWidth: '110px',
+                            changed: (_v) => {
+                                if (_v) {
+                                    this.table.searchObj.${joinSelectColumnInfo.columnName}StartTime = _v[0];
+                                    this.table.searchObj.${joinSelectColumnInfo.columnName}EndTime = _v[1];
+                                } else {
+                                    delete this.table.searchObj.${joinSelectColumnInfo.columnName}StartTime;
+                                    delete this.table.searchObj.${joinSelectColumnInfo.columnName}EndTime;
+                                }
+                            }
+                        },
+                        <#else>
+                        {
+                            code: '${joinSelectColumnInfo.columnName}',
+                            label: '${joinSelectColumnInfo.columnComment}',
+                            type: 'text',
+                            minLength: 0,
+                            MaxLength: 80,
+                            required: true,
+                            labelWidth: '80px'
+                        },
+                        </#if>
+                        </#list>
+                        </#if>
                     ],
                     columnAttributes: [
                         <#list viewColumnInfos as viewColumnInfo>
-                        <#if viewColumnInfo.dataType == "varchar">
-                        {
-                            label: '${viewColumnInfo.columnComment}', prop: '${viewColumnInfo.columnName}', minWidth: 150, showOverflowTooltip: true
-                        },
-                        </#if>
                         <#if viewColumnInfo.dataType == "date">
                         {
                             label: '${viewColumnInfo.columnComment}', prop: '${viewColumnInfo.columnName}', minWidth: 140, showOverflowTooltip: true,
@@ -104,8 +135,30 @@
                                 return this.vDate.format(cellValue, 'date');
                             }
                         },
+                        <#else>
+                        {
+                            label: '${viewColumnInfo.columnComment}', prop: '${viewColumnInfo.columnName}', minWidth: 150, showOverflowTooltip: true
+                        },
                         </#if>
                         </#list>
+
+                        <#if joinViewColumnInfos??&&(joinViewColumnInfos?size>0)>
+                        <#list joinViewColumnInfos as joinViewColumnInfo>
+                        <#if joinViewColumnInfo.dataType == "date">
+                        {
+                            label: '${joinViewColumnInfo.columnComment}', prop: '${joinViewColumnInfo.columnName}', minWidth: 140, showOverflowTooltip: true,
+                            formatter: function (row, column, cellValue, index) {
+                                return this.vDate.format(cellValue, 'date');
+                            }
+                        },
+                        <#else >
+                        {
+                            label: '${joinViewColumnInfo.columnComment}', prop: '${joinViewColumnInfo.columnName}', minWidth: 150, showOverflowTooltip: true
+                        },
+                        </#if>
+
+                        </#list>
+                        </#if>
                     ],
                     toolbarButtons: [
                         <#if isHaveExport??&&isHaveExport=='Y'>
@@ -121,7 +174,7 @@
                                     spinner: 'el-icon-loading',
                                     background: 'rgba(0, 0, 0, 0.7)'
                                 });
-                                exportRpt(searchObj).then(response => {
+                                export${tableName}List(searchObj).then(response => {
                                     const link = document.createElement('a')
                                     let blob = new Blob([response.data], {type: 'application/vnd.ms-excel'})
                                     link.style.display = 'none'

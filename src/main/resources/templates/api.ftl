@@ -46,9 +46,9 @@ baseURL: moduleBaseUrls.${module}
 <#if isHaveExport??&&isHaveExport=='Y'>
 /**
 * 导出${tableCnName}**/
-export function exportRpt(data) {
+export function export${tableName}List(data) {
 return request({
-url: '/${module}/l${tableName}/exportRpt',
+url: '/${module}/l${tableName}/export${tableName}List',
 method: 'get',
 params: data,
 paramsSerializer: function(params) {
